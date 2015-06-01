@@ -1,6 +1,8 @@
 package com.example.q.camara;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
@@ -8,6 +10,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+
+import com.example.q.camara.Statistics.HttpThread;
+
+import org.json.JSONObject;
 
 
 public class ResumeActivity extends ActionBarActivity {

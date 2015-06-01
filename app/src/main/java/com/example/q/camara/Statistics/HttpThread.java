@@ -102,37 +102,50 @@ public class HttpThread extends Thread {
                         sb.append(output);
                     }
                     message.obj = new JSONObject(sb.toString());
+                    message.what = MessageID.POST_SUCCESS;
                     h.sendMessage(message);
 
                 } else {
                     message = new Message();
                     message.obj = "received" + httpURLConnection.getResponseCode();
+                    message.what = MessageID.POST_FAILED;
                     h.sendMessage(message);
                 }
             }
             else if(method.equals("PUT")){
+
+                System.out.println(ur);
+
+                SharedPreferences sharedPreferences = context.getSharedPreferences("Data", Context.MODE_PRIVATE);
+                String cookie = sharedPreferences.getString("cookie","A?N");
+                httpURLConnection.setRequestProperty("cookie",cookie);
                 httpURLConnection.setDoOutput(true);
                 httpURLConnection.setRequestMethod("PUT");
                 httpURLConnection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                 outputStream = httpURLConnection.getOutputStream();
                 outputStream.write(jsonObject.toString().getBytes("UTF-8"));
+
+                message = new Message();
+
                 if (httpURLConnection.getResponseCode() == 200) {
-                    message = new Message();
-                    message.obj = "ha arribat PUT correctament";
+                    System.out.println(ur+"   200");
+                    message.what = MessageID.PUT;
                     h.sendMessage(message);
 
                 } else {
-                    message = new Message();
-                    message.obj = "received" + httpURLConnection.getResponseCode();
+                    message.what = MessageID.PUT;
                     h.sendMessage(message);
                 }
             }
             else if(method.equals("DELETE")){
-                httpURLConnection.setDoOutput(true);
+
+
+                httpURLConnection.setDoOutput(false);
                 httpURLConnection.setRequestMethod("DELETE");
                 httpURLConnection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                 outputStream = httpURLConnection.getOutputStream();
                 outputStream.write(jsonObject.toString().getBytes("UTF-8"));
+
                 if (httpURLConnection.getResponseCode() == 200) {
                     message = new Message();
                     message.obj = "ha arribat DELETE correctament";

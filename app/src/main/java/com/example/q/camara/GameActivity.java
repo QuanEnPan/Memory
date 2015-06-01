@@ -21,6 +21,13 @@ import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.GridView;
 import android.widget.Toast;
+
+import com.example.q.camara.Statistics.HttpThread;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -53,15 +60,53 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
     //private String role ;
     Handler handler;
     private Tauler tauler;
+    private String idpartida;
+    Handler h;
     private SocketConection con;
+    HttpThread thread1;
+    String username;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        JSONObject object = new JSONObject();
+
+        h = new Handler(){
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+
+                switch (msg.what){
+                    case MessageID.POST_SUCCESS:
+
+                        System.out.println("POST_SUCCESS");
+
+                        JSONObject object2 = (JSONObject) msg.obj;
+
+                        try {
+                            JSONArray jsonArray = object2.getJSONArray("data");
+                            JSONObject jsonObject2 = (JSONObject) jsonArray.get(0);
+                            String id = (String) jsonObject2.get("_id");
+                            tauler.setId(id);
+                            idpartida = id;
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        break;
+
+                    case MessageID.PUT:
+                        Toast.makeText(getApplication(),"PUT",Toast.LENGTH_LONG).show();
+                        break;
+                }
+            }
+        };
+
         if (savedInstanceState==null) {
             Bundle b = getIntent().getExtras();
             mida = b.getInt("size");
             SharedPreferences s = getSharedPreferences("Data", MODE_PRIVATE);
-            String username = s.getString("email","N?A");
+            username = s.getString("email","N?A");
 
             tauler = new Tauler(initlnumbers(), 0);
             oldNumbers = copyList(tauler.getTauler());
@@ -78,6 +123,14 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
             tauler = (Tauler) savedInstanceState.getSerializable("tauler");
             oldNumbers = copyList(tauler.getTauler());
         }
+
+        if(player1.getRole().equals("server")){
+            SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
+            String id = sharedPreferences.getString("id","A?N");
+            thread1 = new HttpThread("POST","users/"+id+"/games/",object,h,this);
+            thread1.start();
+        }
+
         sensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
         setContentView(R.layout.activity_game);
         view = this.getWindow().getDecorView();
@@ -100,9 +153,6 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
                     Toast.makeText(getApplicationContext(), "It's your turn", Toast.LENGTH_SHORT).show();
                 }
                 gv.setAdapter(new NumberAdapter(GameActivity.this));
-
-
-
             }
         };
         con = new SocketConection();
@@ -241,81 +291,84 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
         public void run() {
             tauler.setPlayer(player1);
             Message msg;
-            if (player1.getRole().equals("server")) {
-                try {
-                    serverSocket = new ServerSocket(port);
+            try {
+                if (player1.getRole().equals("server")) {
 
-                    //serverSocket.setSoTimeout(1000000000);
-                    new Thread(){
-                        @Override
-                        public void run() {
-                            //try {
-                                while (tauler.getMove2() == null) {
-                                    //sleep(500); per consumir menys recursos.
-                                }
-                                player1.setIsMyTurn(false);
-//                            } catch (InterruptedException e) {
-//                                e.printStackTrace();
-//                            }
-                        }
-                    }.start();
+                        serverSocket = new ServerSocket(port);
 
-                    socket = serverSocket.accept();
+                        serverSocket.setSoTimeout(5000);
+                        new Thread(){
+                            @Override
+                            public void run() {
+                                //try {
+                                    while (tauler.getMove2() == null) {
+                                        //sleep(500); per consumir menys recursos.
+                                    }
+                                    player1.setIsMyTurn(false);
+    //                            } catch (InterruptedException e) {
+    //                                e.printStackTrace();
+    //                            }
+                            }
+                        }.start();
 
-                    doMove();
-                    while (tauler.getAllPoints() < tauler.getTauler().size()/2) {
+                        socket = serverSocket.accept();
 
-                        waitMove();
-                        msg = new Message();
-                        msg.what = 2;
-                        msg.obj = "socket connection";
-                        handler.sendMessage(msg);
                         doMove();
-                    }
+                        while (tauler.getAllPoints() < tauler.getTauler().size()/2) {
 
-                } catch (Exception ignored) {
+                            waitMove();
+                            msg = new Message();
+                            msg.what = 2;
+                            msg.obj = "socket connection";
+                            handler.sendMessage(msg);
+                            doMove();
+                        }
+                }
+
+                if (GameActivity.this.player1.getRole().equals("client")) {
+                        sleep(2000);
+                        socket = new Socket(ip, port);
+                        tauler.setPlayer(player1);
+
+                        while (tauler.getAllPoints() < tauler.getTauler().size()/2 ){
+                            waitMove();
+                            msg = new Message();
+                            msg.what = 2;
+
+                            String s = "socket connection";
+                            msg.obj = s;
+                            handler.sendMessage(msg);
+                            doMove();
+                        }
+                }
+
+            } catch (Exception ignored) {
+                    System.out.println("id_partiiida: "+tauler.getId());
+
+                    SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
+                    String id = sharedPreferences.getString("id","A?N");
+
+                    thread1 = new HttpThread("DELETE", "users/"+id+"/games/"+tauler.getId(), new JSONObject(), h, getApplicationContext());
+                    thread1.start();
 
                     GameActivity.this.finish();
                     GameActivity.this.startActivity(new Intent(getApplicationContext(), ResumeActivity.class ));
                 }finally {
                     try {
-                        serverSocket.close();
+                        if(serverSocket!=null)
+                            serverSocket.close();
                     } catch (IOException e) {
-                        e.printStackTrace();
+
+                        System.out.println("id_partiiida: "+tauler.getId());
+
+                        SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
+                        String id = sharedPreferences.getString("id","A?N");
+
+                        thread1 = new HttpThread("DELETE", "users/"+id+"/games/"+tauler.getId(), new JSONObject(), h, getApplicationContext());
+                        thread1.start();
                     }
                     finish();
                 }
-            }
-
-            if (GameActivity.this.player1.getRole().equals("client")) {
-
-                try {
-
-                    sleep(2000);
-                    socket = new Socket(ip, port);
-                    tauler.setPlayer(player1);
-
-                    while (tauler.getAllPoints() < tauler.getTauler().size()/2 ){
-                        waitMove();
-                        msg = new Message();
-                        msg.what = 2;
-
-                        String s = "socket connection";
-                        msg.obj = s;
-                        handler.sendMessage(msg);
-                        doMove();
-                    }
-                } catch (Exception e) {
-
-                    GameActivity.this.finish();
-                    GameActivity.this.startActivity(new Intent(getApplicationContext(), ResumeActivity.class));
-                }finally {
-                    finish();
-                }
-
-            }
-
-
 
         }
         private void finish() {
@@ -330,6 +383,25 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
                 } catch (Exception e) {
 
                 }finally{
+
+                    JSONObject object = new JSONObject();
+                    try {
+                        if(username.equals(tauler.getWinner()))
+                            object.put("winner", tauler.getWinner());
+                        else
+                            object.put("loser", username);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                    SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
+                    String id = sharedPreferences.getString("id","A?N");
+
+                    System.out.println("id_partoda: "+tauler.getId());
+
+                    thread1 = new HttpThread("PUT", "users/"+id+"/games/"+tauler.getId(), object, h, getApplicationContext());
+                    thread1.start();
+
                     GameActivity.this.finish();
                     GameActivity.this.startActivity(new Intent(getApplicationContext(), ResumeActivity.class).putExtra("winner", winner));
                 }
@@ -340,7 +412,7 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
 
         private void waitMove() throws IOException, InterruptedException, ClassNotFoundException {
             int i=0;
-            while(socket.getInputStream().available()<=0 && i<120){
+            while(socket.getInputStream().available()<=0 && i</*120*/ 10){
                 sleep(1000); i++;
             }
             input = new ObjectInputStream(socket.getInputStream());
@@ -355,6 +427,7 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
                 }
                 sleep(2000);
                 tauler.reset();
+                socket.setSoTimeout(3000);
                 output = new ObjectOutputStream(socket.getOutputStream());
                 output.writeObject(tauler);
                 player1.setIsMyTurn(false);

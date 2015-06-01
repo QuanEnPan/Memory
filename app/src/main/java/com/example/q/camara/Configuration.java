@@ -20,7 +20,7 @@ public class Configuration extends ListActivity{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_configuration);
-        sizesPanel = new String[]{ "12 Cells ",  "16 Cells" ,"20 Cells", "24 Cells","28 Cells", "32 Cells"};
+        sizesPanel = new String[]{ "6 Cells ",  "16 Cells" ,"20 Cells", "24 Cells","28 Cells", "32 Cells"};
         ArrayAdapter adapter = new ArrayAdapter<>(this, android.R.layout.simple_expandable_list_item_1, sizesPanel);
         setListAdapter(adapter);
 
