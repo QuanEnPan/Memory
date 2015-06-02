@@ -21,8 +21,7 @@ public class Player implements Serializable{
         else {
             isMyTurn = false;
         }
-        /*this.tirada1 = tirada1;
-        this.tirada2 = tirada2;*/
+
     }
 
     public String getName() {
@@ -48,12 +47,15 @@ public class Player implements Serializable{
     public boolean compareMove(char c1, char c2 ){
         return c1 == c2;
     }
+
     public void addPoint(){
         this.points ++;
     }
+
     public boolean getIsMyTurn() {
         return isMyTurn;
     }
+
     public void setIsMyTurn(boolean isMyTurn) {
         this.isMyTurn = isMyTurn;
     }

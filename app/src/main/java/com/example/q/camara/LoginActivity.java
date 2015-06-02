@@ -35,7 +35,7 @@ public class LoginActivity extends ActionBarActivity implements View.OnClickList
     Button btn_logIn_log;
     Button btn_back;
     HttpThread thread1;
-    Handler h;
+    Handler requestHandler;
     SharedPreferences sharedPreferences;
     SharedPreferences.Editor editor;
 
@@ -103,7 +103,7 @@ public class LoginActivity extends ActionBarActivity implements View.OnClickList
                     }catch (JSONException e) {
                         e.printStackTrace();
                     }
-                    h = new Handler() {
+                    requestHandler = new Handler() {
                         @Override
                         public void handleMessage(Message msg) {
                             super.handleMessage(msg);
@@ -125,7 +125,7 @@ public class LoginActivity extends ActionBarActivity implements View.OnClickList
                             }
                         }
                     };
-                    thread1 = new HttpThread("POST", "users/", object, h,this);
+                    thread1 = new HttpThread("POST", "users/", object, requestHandler,this);
                     thread1.start();
 
                     Toast.makeText(this, et_email.getText().toString() + " login successful", Toast.LENGTH_LONG).show();

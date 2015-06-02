@@ -32,6 +32,7 @@ public class StatisticsActivity extends ActionBarActivity {
     Handler h;
     HttpThread thread1;
     List<StatisticsInfo> statisticsInfo;
+    StatisticsInfoAdapter statisticsInfoAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,24 +74,20 @@ public class StatisticsActivity extends ActionBarActivity {
             }
         };
 
-        thread1 = new HttpThread("GET","users/55689f16dcc442e41b840281/games",null,h,this);
+        SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
+        String id = sharedPreferences.getString("id","A?N");
+
+        System.out.println("id:  "+id);
+
+        thread1 = new HttpThread("GET","users/"+id+"/games",null,h,this);
         thread1.start();
 
-        /*statisticsInfo.add(new StatisticsInfo("H","1",false));
-        statisticsInfo.add(new StatisticsInfo("E","2",true));
-        statisticsInfo.add(new StatisticsInfo("R","3",true));
-        statisticsInfo.add(new StatisticsInfo("G","4",true));
-        statisticsInfo.add(new StatisticsInfo("T","5",true));
-        statisticsInfo.add(new StatisticsInfo("B","6",true));
-        statisticsInfo.add(new StatisticsInfo("J","7",true));
-        statisticsInfo.add(new StatisticsInfo("L","1",true));
-        statisticsInfo.add(new StatisticsInfo("Ñ","2",true));*/
+        RecyclerView.ItemAnimator animator = recyclerView.getItemAnimator();
+        animator.setAddDuration(2000);
 
-
-        StatisticsInfoAdapter statisticsInfoAdapter = new StatisticsInfoAdapter(statisticsInfo,this);
+        statisticsInfoAdapter = new StatisticsInfoAdapter(statisticsInfo,this);
         recyclerView.setAdapter(statisticsInfoAdapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
 
     }
 
@@ -120,36 +117,21 @@ public class StatisticsActivity extends ActionBarActivity {
         SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
         String user = sharedPreferences.getString("email","A?N");
 
-//        JSONObject jsonObject = new JSONObject(json);
-
-        System.out.println("hhhhhh");
-
         JSONObject jsonObject = new JSONObject(json);
-//        JSONObject jsonObject1 = jsonObject.getJSONObject("data");
-//
-//        System.out.println(jsonObject1+" jjjjj");
-
         JSONArray jsonArray = jsonObject.getJSONArray("data");
-
-        System.out.println(jsonArray+" kkkkk");
 
         for(int i=0; i<jsonArray.length(); i++){
 
             JSONObject jsonObject2 = (JSONObject) jsonArray.get(i);
-            System.out.println(jsonObject2);
-
             String loser = (String) jsonObject2.get("loser");
             String winner = (String) jsonObject2.get("winner");
-
             String initDate = (String) jsonObject2.get("initDate");
-//            String _id = (String) jsonObject2.get("_id");
 
             if(loser.equals(user)){
-                statisticsInfo.add(new StatisticsInfo("opponent: "+winner,"Date: "+initDate,false));
-            }else
-                statisticsInfo.add(new StatisticsInfo("opponent: "+loser,"Date: "+initDate,true));
-
-//            System.out.println("initDate: "+initDate+"  _id: "+_id+" user: "+user);
+                statisticsInfoAdapter.addItem(new StatisticsInfo(winner,initDate,false));
+            }else{
+                statisticsInfoAdapter.addItem(new StatisticsInfo(loser,initDate,true));
+            }
         }
     }
 }

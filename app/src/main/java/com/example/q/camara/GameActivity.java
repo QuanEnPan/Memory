@@ -57,11 +57,11 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
     private Sensor sensorLight;
     private View view;
     private String ip;
-    //private String role ;
+
     Handler handler;
     private Tauler tauler;
     private String idpartida;
-    Handler h;
+    Handler requestHandler;
     private SocketConection con;
     HttpThread thread1;
     String username;
@@ -72,7 +72,7 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
 
         JSONObject object = new JSONObject();
 
-        h = new Handler(){
+        requestHandler = new Handler(){
             @Override
             public void handleMessage(Message msg) {
                 super.handleMessage(msg);
@@ -127,7 +127,7 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
         if(player1.getRole().equals("server")){
             SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
             String id = sharedPreferences.getString("id","A?N");
-            thread1 = new HttpThread("POST","users/"+id+"/games/",object,h,this);
+            thread1 = new HttpThread("POST","users/"+id+"/games/",object,requestHandler,this);
             thread1.start();
         }
 
@@ -296,18 +296,15 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
 
                         serverSocket = new ServerSocket(port);
 
-                        serverSocket.setSoTimeout(5000);
+                        serverSocket.setSoTimeout(10000);
                         new Thread(){
                             @Override
                             public void run() {
-                                //try {
+
                                     while (tauler.getMove2() == null) {
                                         //sleep(500); per consumir menys recursos.
                                     }
                                     player1.setIsMyTurn(false);
-    //                            } catch (InterruptedException e) {
-    //                                e.printStackTrace();
-    //                            }
                             }
                         }.start();
 
@@ -328,6 +325,7 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
                 if (GameActivity.this.player1.getRole().equals("client")) {
                         sleep(2000);
                         socket = new Socket(ip, port);
+
                         tauler.setPlayer(player1);
 
                         while (tauler.getAllPoints() < tauler.getTauler().size()/2 ){
@@ -341,85 +339,74 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
                             doMove();
                         }
                 }
+                finish();
 
             } catch (Exception ignored) {
-                    System.out.println("id_partiiida: "+tauler.getId());
-
-                    SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
-                    String id = sharedPreferences.getString("id","A?N");
-
-                    thread1 = new HttpThread("DELETE", "users/"+id+"/games/"+tauler.getId(), new JSONObject(), h, getApplicationContext());
-                    thread1.start();
-
-                    GameActivity.this.finish();
-                    GameActivity.this.startActivity(new Intent(getApplicationContext(), ResumeActivity.class ));
-                }finally {
-                    try {
-                        if(serverSocket!=null)
-                            serverSocket.close();
-                    } catch (IOException e) {
-
-                        System.out.println("id_partiiida: "+tauler.getId());
-
-                        SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
-                        String id = sharedPreferences.getString("id","A?N");
-
-                        thread1 = new HttpThread("DELETE", "users/"+id+"/games/"+tauler.getId(), new JSONObject(), h, getApplicationContext());
-                        thread1.start();
-                    }
-                    finish();
+                deleteGame();
+                GameActivity.this.startActivity(new Intent(getApplicationContext(), ResumeActivity.class ));
+                GameActivity.this.finish();
+            }finally {
+                try {
+                    if(serverSocket!=null)
+                        serverSocket.close();
+                } catch (IOException e) {
+                    deleteGame();
                 }
+
+            }
 
         }
         private void finish() {
             if (socket != null && !socket.isClosed()) {
-                String winner = tauler.getWinner();
+
                 try {
+                    String winner = tauler.getWinner();
+
                     if (tauler.getFirstAskWinner()) {
                         output = new ObjectOutputStream(socket.getOutputStream());
                         output.writeObject(tauler);
                     }
                     this.closeSocket();
-                } catch (Exception e) {
-
-                }finally{
-
                     JSONObject object = new JSONObject();
-                    try {
-                        if(username.equals(tauler.getWinner()))
-                            object.put("winner", tauler.getWinner());
-                        else
-                            object.put("loser", username);
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                    if(username.equals(tauler.getWinner())) {
+                        object.put("winner", tauler.getWinner());
+                    }else {
+                        object.put("loser", username);
                     }
-
-                    SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
-                    String id = sharedPreferences.getString("id","A?N");
-
-                    System.out.println("id_partoda: "+tauler.getId());
-
-                    thread1 = new HttpThread("PUT", "users/"+id+"/games/"+tauler.getId(), object, h, getApplicationContext());
-                    thread1.start();
-
+                    putGame(object);
                     GameActivity.this.finish();
                     GameActivity.this.startActivity(new Intent(getApplicationContext(), ResumeActivity.class).putExtra("winner", winner));
+
+                } catch (Exception e) {
+                    GameActivity.this.startActivity(new Intent(getApplicationContext(), ResumeActivity.class).putExtra("winner", tauler.getWinner()));
                 }
-
-
             }
+        }
+
+        private void putGame(JSONObject object){
+            SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
+            String id = sharedPreferences.getString("id","A?N");
+            thread1 = new HttpThread("PUT", "users/"+id+"/games/"+tauler.getId(), object, requestHandler, getApplicationContext());
+            thread1.start();
+        }
+
+
+        private void deleteGame(){
+            SharedPreferences sharedPreferences = getSharedPreferences("Data", Context.MODE_PRIVATE);
+            String id = sharedPreferences.getString("id","A?N");
+            thread1 = new HttpThread("DELETE", "users/"+id+"/games/"+tauler.getId(), new JSONObject(), requestHandler, getApplicationContext());
+            thread1.start();
         }
 
         private void waitMove() throws IOException, InterruptedException, ClassNotFoundException {
             int i=0;
-            while(socket.getInputStream().available()<=0 && i</*120*/ 10){
-                sleep(1000); i++;
-            }
+            socket.setSoTimeout(10000);
             input = new ObjectInputStream(socket.getInputStream());
             player1.setIsMyTurn(true);
             tauler = (Tauler)input.readObject();
             oldNumbers = copyList(tauler.getTauler());
         }
+
         private void doMove() throws IOException, InterruptedException {
             if(tauler.getAllPoints() < tauler.getTauler().size()/2) {
                 while (tauler.getMove2() == null) {
@@ -441,7 +428,8 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
                 if (!socket.isClosed()) {
                     socket.close();
                 }
-            }catch(Exception e){}
+            }catch(Exception e){
+            }
         }
 
     }

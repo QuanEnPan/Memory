@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import com.example.q.camara.MessageID;
 
@@ -45,11 +46,12 @@ public class HttpThread extends Thread {
     @Override
     public void run() {
         try {
-            String ip = "192.168.1.128";
+            String ip = "192.168.1.138";
             String port = "3000";
             URL ur = null;
 
             ur = new URL("http://" + ip + ":" + port + "/" + url);
+            Log.e(".....", ur.toString());
             HttpURLConnection httpURLConnection = (HttpURLConnection) ur.openConnection();
             if (method.equals("GET")) {
                 httpURLConnection.setDoOutput(false);
@@ -139,13 +141,17 @@ public class HttpThread extends Thread {
             }
             else if(method.equals("DELETE")){
 
-
+                //Log.e(".......", "ttttt");
                 httpURLConnection.setDoOutput(false);
                 httpURLConnection.setRequestMethod("DELETE");
-                httpURLConnection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-                outputStream = httpURLConnection.getOutputStream();
-                outputStream.write(jsonObject.toString().getBytes("UTF-8"));
+                SharedPreferences sharedPreferences = context.getSharedPreferences("Data", Context.MODE_PRIVATE);
+                String cookie = sharedPreferences.getString("cookie","A?N");
+                httpURLConnection.setRequestProperty("cookie",cookie);
 
+                //httpURLConnection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                //outputStream = httpURLConnection.getOutputStream();
+                //outputStream.write(jsonObject.toString().getBytes("UTF-8"));
+                //Log.e(",,,,,,", "llllll");
                 if (httpURLConnection.getResponseCode() == 200) {
                     message = new Message();
                     message.obj = "ha arribat DELETE correctament";

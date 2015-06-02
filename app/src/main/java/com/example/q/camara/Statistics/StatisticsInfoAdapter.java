@@ -62,4 +62,9 @@ public class StatisticsInfoAdapter extends RecyclerView.Adapter<StatisticsInfoAd
             imageView = (ImageView)itemView.findViewById(R.id.imageView);
         }
     }
+
+    public void addItem(StatisticsInfo statisticsInfo){
+        this.statisticsInfoList.add(statisticsInfo);
+        notifyItemInserted(this.statisticsInfoList.size());
+    }
 }
