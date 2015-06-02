@@ -296,7 +296,7 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
 
                         serverSocket = new ServerSocket(port);
 
-                        serverSocket.setSoTimeout(10000);
+                        serverSocket.setSoTimeout(100000);
                         new Thread(){
                             @Override
                             public void run() {
@@ -379,6 +379,7 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
 
                 } catch (Exception e) {
                     GameActivity.this.startActivity(new Intent(getApplicationContext(), ResumeActivity.class).putExtra("winner", tauler.getWinner()));
+                    GameActivity.this.finish();
                 }
             }
         }
@@ -400,7 +401,7 @@ public class GameActivity extends ActionBarActivity implements SensorEventListen
 
         private void waitMove() throws IOException, InterruptedException, ClassNotFoundException {
             int i=0;
-            socket.setSoTimeout(10000);
+            socket.setSoTimeout(100000);
             input = new ObjectInputStream(socket.getInputStream());
             player1.setIsMyTurn(true);
             tauler = (Tauler)input.readObject();
